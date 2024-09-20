@@ -68,19 +68,27 @@ async function scrollAndLoadImages() {
       }
     }
 
-  // 先检测是否有.pagination-loading
-  if (document.querySelector('.pagination-loading')) {
-    console.log('检测到加载中的图片，等待其消失');
+  // 检测屏幕可见范围内是否有.pagination-loading
+  const paginationLoading = Array.from(document.querySelectorAll('.pagination-loading')).find(element => {
+    const rect = element.getBoundingClientRect();
+    return rect.top >= 0 && rect.bottom <= window.innerHeight;
+  });
+
+  if (paginationLoading) {
+    console.log('检测到屏幕可见范围内有加载中的图片，等待其消失');
     let waitTime = 0;
     const maxWaitTime = 5000; // 最大等待时间为5秒
-    while (document.querySelector('.pagination-loading') && waitTime < maxWaitTime) {
+    while (Array.from(document.querySelectorAll('.pagination-loading')).some(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.top >= 0 && rect.bottom <= window.innerHeight;
+    }) && waitTime < maxWaitTime) {
       await sleep(200);
       waitTime += 200;
     } 
     if (waitTime >= maxWaitTime) {
       console.log('等待加载中的图片超时，继续执行');
     } else {
-      console.log('所有加载中的图片已消失');
+      console.log('屏幕可见范围内所有加载中的图片已消失');
     }
   }
 
