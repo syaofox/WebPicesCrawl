@@ -1,0 +1,21 @@
+#image-extractor-floating {
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+#image-extractor-floating button {
+  margin: 5px;
+  padding: 5px 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+
+#image-extractor-floating button:hover {
+  background-color: #45a049;
+}

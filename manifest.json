@@ -1,0 +1,40 @@
+{
+  "manifest_version": 2,
+  "name": "图片提取器",
+  "version": "1.1",
+  "description": "从指定网站提取并下载图片",
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "https://www.photos18.com/*",
+    "https://*.knit.bid/*"
+  ],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.photos18.com/*",
+        "https://*.knit.bid/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_end"
+    }
+  ]
+}
