@@ -12,7 +12,8 @@
     "activeTab",
     "downloads",
     "https://www.photos18.com/*",
-    "https://*.knit.bid/*"
+    "https://*.knit.bid/*",
+    "https://www.xinmeitulu.com/*"
   ],
   "browser_action": {
     "default_popup": "popup.html",
@@ -30,7 +31,8 @@
     {
       "matches": [
         "https://www.photos18.com/*",
-        "https://*.knit.bid/*"
+        "https://*.knit.bid/*",
+        "https://www.xinmeitulu.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
