@@ -16,6 +16,8 @@ function extractImages() {
       }
       return src;
     });
+  } else if (window.location.hostname.includes('xinmeitulu.com')) {
+    images = Array.from(document.querySelectorAll('body > div:nth-child(7) > div > figure > a > img')).map(img => img.src);
   }
 
   return { urls: images, count: images.length, title: pageTitle };
