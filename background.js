@@ -44,7 +44,7 @@ async function downloadImages(urls, folderName, pageUrl) {
   for (let i = 0; i < urls.length; i++) {
     let url = urls[i];
     try {
-      let filename = `${folderName}/${i + 1}.jpg`;
+      let filename = `${folderName}/${String(i + 1).padStart(5, '0')}.jpg`;
       await chrome.downloads.download({
         url: url,
         filename: filename,
