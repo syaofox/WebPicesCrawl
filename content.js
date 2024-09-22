@@ -18,6 +18,20 @@ function extractImages() {
     });
   } else if (window.location.hostname.includes('xinmeitulu.com')) {
     images = Array.from(document.querySelectorAll('body > div:nth-child(7) > div > figure > a > img')).map(img => img.src);
+  } else if (window.location.hostname.includes('japanesethumbs.com')) {
+    const urlPath = window.location.pathname.split('/').filter(Boolean);
+    if (urlPath.length >= 2) {
+      const urlPrefix = `/${urlPath[0]}/${urlPath[1]}`;
+      images = Array.from(document.querySelectorAll('a')).filter(a => {
+        // 检查 a 标签的 href 属性
+        const hrefValid = a.href.includes(urlPrefix) && /\.(jpg|jpeg|png|gif|webp)$/i.test(a.href);
+        
+        // 检查 a 标签下是否有 img 子标签,且 img 的 src 属性也包含相同的 URL 前缀
+        const imgValid = a.querySelector('img[src*="' + urlPrefix + '"]') !== null;
+        
+        return hrefValid && imgValid;
+      }).map(a => a.href);
+    }
   }
 
   return { urls: images, count: images.length, title: pageTitle };
