@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "图片提取器",
   "version": "1.1",
   "description": "从指定网站提取并下载图片",
@@ -10,13 +10,15 @@
   },
   "permissions": [
     "activeTab",
-    "downloads",
+    "downloads"
+  ],
+  "host_permissions": [
     "https://www.photos18.com/*",
     "https://*.knit.bid/*",
     "https://www.xinmeitulu.com/*",
     "https://japanesethumbs.com/*"
   ],
-  "browser_action": {
+  "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "images/icon16.png",
@@ -25,8 +27,7 @@
     }
   },
   "background": {
-    "scripts": ["background.js"],
-    "persistent": false
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
