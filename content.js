@@ -32,6 +32,8 @@ function extractImages() {
         return hrefValid && imgValid;
       }).map(a => a.href);
     }
+  } else if (window.location.hostname.includes('jkforum.net')) {
+    images = Array.from(document.querySelectorAll('ignore_js_op > img')).map(img => img.src);
   }
 
   return { urls: images, count: images.length, title: pageTitle };
@@ -264,4 +266,3 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 });
 
 console.log('content.js 已加载');
-

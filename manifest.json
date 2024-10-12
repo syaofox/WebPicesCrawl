@@ -16,7 +16,8 @@
     "https://www.photos18.com/*",
     "https://*.knit.bid/*",
     "https://www.xinmeitulu.com/*",
-    "https://japanesethumbs.com/*"
+    "https://japanesethumbs.com/*",
+    "https://www.jkforum.net/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -35,7 +36,8 @@
         "https://www.photos18.com/*",
         "https://*.knit.bid/*",
         "https://www.xinmeitulu.com/*",
-        "https://japanesethumbs.com/*"
+        "https://japanesethumbs.com/*",
+        "https://www.jkforum.net/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
