@@ -18,7 +18,8 @@
     "https://www.xinmeitulu.com/*",
     "https://japanesethumbs.com/*",
     "https://www.jkforum.net/*",
-    "https://www.cool18.com/*"
+    "https://www.cool18.com/*",
+    "https://reprint-kh.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -39,7 +40,8 @@
         "https://www.xinmeitulu.com/*",
         "https://japanesethumbs.com/*",
         "https://www.jkforum.net/*",
-        "https://www.cool18.com/*"
+        "https://www.cool18.com/*",
+        "https://reprint-kh.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

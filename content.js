@@ -41,6 +41,17 @@ function extractImages() {
     images = [...images1, ...images2].map(img => img.src);
   } else if (window.location.hostname.includes('cool18.com')) {
     images = Array.from(document.querySelectorAll('td > pre > center > img')).map(img => img.getAttribute('mydatasrc') || img.src);
+  } else if (window.location.hostname.includes('reprint-kh.com')) {
+    images = Array.from(document.querySelectorAll('div.tiled-gallery-item a[data-image-id]')).map(a => {
+      let src = a.href;
+      // 如果是相对路径，转换为绝对路径
+      if (src.startsWith('/')) {
+        src = window.location.origin + src;
+      } else if (!src.startsWith('http')) {
+        src = new URL(src, window.location.href).href;
+      }
+      return src;
+    });
   }
 
   return { urls: images, count: images.length, title: pageTitle };
