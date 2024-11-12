@@ -33,7 +33,14 @@ function extractImages() {
       }).map(a => a.href);
     }
   } else if (window.location.hostname.includes('jkforum.net')) {
-    images = Array.from(document.querySelectorAll('ignore_js_op > img')).map(img => img.src);
+    // 合并两种选择器的结果
+    const selector1 = 'ignore_js_op > img';
+    const selector2 = 'div.t_fsz td.t_f > img';
+    const images1 = Array.from(document.querySelectorAll(selector1));
+    const images2 = Array.from(document.querySelectorAll(selector2));
+    images = [...images1, ...images2].map(img => img.src);
+  } else if (window.location.hostname.includes('cool18.com')) {
+    images = Array.from(document.querySelectorAll('td > pre > center > img')).map(img => img.getAttribute('mydatasrc') || img.src);
   }
 
   return { urls: images, count: images.length, title: pageTitle };

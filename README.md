@@ -19,6 +19,7 @@
 - xinmeitulu.com
 - japanesethumbs.com
 - jkforum.net
+- cool18.com
 
 ## 安装方法
 
