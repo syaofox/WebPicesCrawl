@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     currentTabId = sender.tab.id;
     sendResponse({success: true, count: extractedImages.length});
     
-    console.error('开始下载:');
+    console.log('开始下载:');
 
     if (extractedImages.length > 0) {
       downloadImages(extractedImages, pageTitle, pageUrl).then(downloadedCount => {
