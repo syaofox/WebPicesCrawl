@@ -52,6 +52,12 @@ function extractImages() {
       }
       return src;
     });
+  } else if (window.location.hostname.includes('1pondo.com')) {
+    // 提取id为"macy"的元素中a标签的href属性
+    const macyContainer = document.getElementById('macy');
+    if (macyContainer) {
+      images = Array.from(macyContainer.querySelectorAll('a')).map(a => a.href);
+    }
   }
 
   return { urls: images, count: images.length, title: pageTitle };

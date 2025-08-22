@@ -19,7 +19,8 @@
     "https://japanesethumbs.com/*",
     "https://www.jkforum.net/*",
     "https://www.cool18.com/*",
-    "https://reprint-kh.com/*"
+    "https://reprint-kh.com/*",
+    "https://1pondo.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -41,7 +42,8 @@
         "https://japanesethumbs.com/*",
         "https://www.jkforum.net/*",
         "https://www.cool18.com/*",
-        "https://reprint-kh.com/*"
+        "https://reprint-kh.com/*",
+        "https://1pondo.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],
