@@ -34,6 +34,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// 新增：记录自己发起的下载 id 及建议的文件名
+let myDownloadIds = new Map();
+
+
 async function downloadImages(urls, folderName, pageUrl) {
   let downloadedCount = 0;
   // 替换非法字符并添加 URL 的 MD5 值
@@ -52,13 +56,16 @@ async function downloadImages(urls, folderName, pageUrl) {
       let filename = `${folderName}/${String(i + 1).padStart(5, '0')}_${originalName}`;
       console.log(filename);
 
-      await chrome.downloads.download({
+       // 记录 downloadId 及建议的文件名
+      const downloadId = await chrome.downloads.download({
         url: url,
         filename: filename,
         conflictAction: 'uniquify',
         saveAs: false
-
       });
+      if (downloadId) {
+        myDownloadIds.set(downloadId, filename);
+      }
       downloadedCount++;
     } catch (error) {
       console.error('下载图片失败:', url, error);
@@ -68,3 +75,16 @@ async function downloadImages(urls, folderName, pageUrl) {
 }
 
 console.log('背景脚本消息监听器已设置');
+
+// 只为自己发起的下载指定文件名
+chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+  if (myDownloadIds.has(item.id)) {
+    // 用Map查找建议的文件名
+    const filename = myDownloadIds.get(item.id);
+    suggest({ filename: filename, conflictAction: 'uniquify' });
+    myDownloadIds.delete(item.id); // 用完即删，防止内存泄漏
+  } else {
+    // 不是自己发起的下载，不处理
+    return;
+  }
+});
