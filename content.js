@@ -285,7 +285,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
   } else if (request.action === "downloadComplete") {
     updateProgress(`下载完成，共下载 ${request.count} 张图片`);
-    enableButton(document.getElementById('download-button'));
+    enableAllButtons();
   }
 });
 

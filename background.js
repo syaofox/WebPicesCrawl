@@ -45,10 +45,14 @@ async function downloadImages(urls, folderName, pageUrl) {
     let url = urls[i];
     try {
       let filename = `${folderName}/${String(i + 1).padStart(5, '0')}.jpg`;
+      console.log(filename);
+
       await chrome.downloads.download({
         url: url,
         filename: filename,
-        conflictAction: 'uniquify'
+        conflictAction: 'uniquify',
+        saveAs: false
+
       });
       downloadedCount++;
     } catch (error) {
