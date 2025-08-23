@@ -44,7 +44,12 @@ async function downloadImages(urls, folderName, pageUrl) {
   for (let i = 0; i < urls.length; i++) {
     let url = urls[i];
     try {
-      let filename = `${folderName}/${String(i + 1).padStart(5, '0')}.jpg`;
+      // Extract original filename from URL
+      const urlObj = new URL(url);
+      const pathParts = urlObj.pathname.split('/');
+      const originalName = pathParts[pathParts.length - 1];
+      
+      let filename = `${folderName}/${String(i + 1).padStart(5, '0')}_${originalName}`;
       console.log(filename);
 
       await chrome.downloads.download({
