@@ -100,12 +100,68 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // 新增：记录自己发起的下载 id 及建议的文件名
 let myDownloadIds = new Map();
 
+// 智能去重函数
+function deduplicateUrls(urls) {
+  const seen = new Set();
+  const uniqueUrls = [];
+  
+  for (const url of urls) {
+    try {
+      // 标准化URL
+      const normalizedUrl = normalizeImageUrl(url);
+      
+      if (!seen.has(normalizedUrl)) {
+        seen.add(normalizedUrl);
+        uniqueUrls.push(url); // 保留原始URL用于下载
+      }
+    } catch (error) {
+      console.warn('URL标准化失败:', url, error);
+      // 如果标准化失败，使用原始URL
+      if (!seen.has(url)) {
+        seen.add(url);
+        uniqueUrls.push(url);
+      }
+    }
+  }
+  
+  return uniqueUrls;
+}
+
+// URL标准化函数
+function normalizeImageUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    
+    // 移除查询参数（除了可能影响图片的参数）
+    const importantParams = ['w', 'h', 'width', 'height', 'size', 'quality'];
+    const searchParams = new URLSearchParams();
+    
+    for (const [key, value] of urlObj.searchParams) {
+      if (importantParams.includes(key.toLowerCase())) {
+        searchParams.set(key.toLowerCase(), value);
+      }
+    }
+    
+    // 移除锚点
+    urlObj.hash = '';
+    
+    // 重建URL
+    const normalizedUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+    const queryString = searchParams.toString();
+    
+    return queryString ? `${normalizedUrl}?${queryString}` : normalizedUrl;
+  } catch (error) {
+    // 如果URL解析失败，返回原始URL
+    return url;
+  }
+}
+
 
 async function downloadImages(urls, folderName, pageUrl) {
   let downloadedCount = 0;
   
-  // 过滤重复图片
-  const uniqueUrls = [...new Set(urls)];
+  // 过滤重复图片 - 使用更智能的去重逻辑
+  const uniqueUrls = deduplicateUrls(urls);
   const duplicateCount = urls.length - uniqueUrls.length;
   
   if (duplicateCount > 0) {

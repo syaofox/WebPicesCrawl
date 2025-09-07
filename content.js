@@ -78,9 +78,9 @@ function extractImages() {
     }).filter(src => src && src.trim() !== ''); // 过滤掉空值
   }
 
-  // 去重处理
+  // 去重处理 - 使用智能去重逻辑
   const beforeDedupCount = images.length;
-  images = [...new Set(images)];
+  images = deduplicateUrls(images);
   const duplicateCount = beforeDedupCount - images.length;
   
   if (duplicateCount > 0) {
@@ -92,6 +92,62 @@ function extractImages() {
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// 智能去重函数
+function deduplicateUrls(urls) {
+  const seen = new Set();
+  const uniqueUrls = [];
+  
+  for (const url of urls) {
+    try {
+      // 标准化URL
+      const normalizedUrl = normalizeImageUrl(url);
+      
+      if (!seen.has(normalizedUrl)) {
+        seen.add(normalizedUrl);
+        uniqueUrls.push(url); // 保留原始URL用于下载
+      }
+    } catch (error) {
+      console.warn('URL标准化失败:', url, error);
+      // 如果标准化失败，使用原始URL
+      if (!seen.has(url)) {
+        seen.add(url);
+        uniqueUrls.push(url);
+      }
+    }
+  }
+  
+  return uniqueUrls;
+}
+
+// URL标准化函数
+function normalizeImageUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    
+    // 移除查询参数（除了可能影响图片的参数）
+    const importantParams = ['w', 'h', 'width', 'height', 'size', 'quality'];
+    const searchParams = new URLSearchParams();
+    
+    for (const [key, value] of urlObj.searchParams) {
+      if (importantParams.includes(key.toLowerCase())) {
+        searchParams.set(key.toLowerCase(), value);
+      }
+    }
+    
+    // 移除锚点
+    urlObj.hash = '';
+    
+    // 重建URL
+    const normalizedUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}`;
+    const queryString = searchParams.toString();
+    
+    return queryString ? `${normalizedUrl}?${queryString}` : normalizedUrl;
+  } catch (error) {
+    // 如果URL解析失败，返回原始URL
+    return url;
+  }
 }
 
 // 检查是否有下一页链接
@@ -140,9 +196,9 @@ async function extractImagesFromAllPages() {
   
   allImages = allImages.concat(currentPageImages);
   
-  // 去重处理
+  // 去重处理 - 使用智能去重逻辑
   const beforeDedupCount = allImages.length;
-  allImages = [...new Set(allImages)];
+  allImages = deduplicateUrls(allImages);
   const duplicateCount = beforeDedupCount - allImages.length;
   
   if (duplicateCount > 0) {
@@ -548,9 +604,9 @@ async function continueMultiPageExtraction(currentPageCount) {
     // 合并图片并去重
     collectedImagesFromAllPages = collectedImagesFromAllPages.concat(currentPageImages);
     
-    // 去重处理
+    // 去重处理 - 使用智能去重逻辑
     const beforeDedupCount = collectedImagesFromAllPages.length;
-    collectedImagesFromAllPages = [...new Set(collectedImagesFromAllPages)];
+    collectedImagesFromAllPages = deduplicateUrls(collectedImagesFromAllPages);
     const duplicateCount = beforeDedupCount - collectedImagesFromAllPages.length;
     
     if (duplicateCount > 0) {
