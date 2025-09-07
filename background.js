@@ -68,16 +68,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   }).catch(retryError => {
                     console.error('重试发送消息失败:', retryError);
                   });
-                }, 2000);
+                }, 1000);
               });
-            }, 2000);
+            }, 1000);
           }
         };
         
         // 添加页面更新监听器
         chrome.tabs.onUpdated.addListener(onTabUpdated);
         
-        // 设置超时保护，如果10秒内页面没有加载完成，强制通知
+        // 设置超时保护，如果5秒内页面没有加载完成，强制通知
         setTimeout(() => {
           chrome.tabs.onUpdated.removeListener(onTabUpdated);
           console.log('页面加载超时，强制通知content script');
@@ -88,7 +88,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           }).catch(error => {
             console.error('超时后发送消息失败:', error);
           });
-        }, 10000);
+        }, 5000);
         
         sendResponse({success: true});
       }
@@ -103,13 +103,24 @@ let myDownloadIds = new Map();
 
 async function downloadImages(urls, folderName, pageUrl) {
   let downloadedCount = 0;
+  
+  // 过滤重复图片
+  const uniqueUrls = [...new Set(urls)];
+  const duplicateCount = urls.length - uniqueUrls.length;
+  
+  if (duplicateCount > 0) {
+    console.log(`发现 ${duplicateCount} 张重复图片，已过滤`);
+  }
+  
+  console.log(`原始图片数量: ${urls.length}, 去重后数量: ${uniqueUrls.length}`);
+  
   // 替换非法字符并添加 URL 的 MD5 值
   folderName = folderName.replace(/[\\/:*?"<>|]/g, '_');
   const urlMD5 = MD5(pageUrl).substring(0, 8); // 使用 MD5 的前 8 位
   folderName = `${folderName}_${urlMD5}`;
   
-  for (let i = 0; i < urls.length; i++) {
-    let url = urls[i];
+  for (let i = 0; i < uniqueUrls.length; i++) {
+    let url = uniqueUrls[i];
     try {
       // Extract original filename from URL
       const urlObj = new URL(url);

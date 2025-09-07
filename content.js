@@ -78,6 +78,15 @@ function extractImages() {
     }).filter(src => src && src.trim() !== ''); // 过滤掉空值
   }
 
+  // 去重处理
+  const beforeDedupCount = images.length;
+  images = [...new Set(images)];
+  const duplicateCount = beforeDedupCount - images.length;
+  
+  if (duplicateCount > 0) {
+    console.log(`发现 ${duplicateCount} 张重复图片，已过滤`);
+  }
+
   return { urls: images, count: images.length, title: pageTitle };
 }
 
@@ -130,6 +139,16 @@ async function extractImagesFromAllPages() {
   }).filter(src => src && src.trim() !== '');
   
   allImages = allImages.concat(currentPageImages);
+  
+  // 去重处理
+  const beforeDedupCount = allImages.length;
+  allImages = [...new Set(allImages)];
+  const duplicateCount = beforeDedupCount - allImages.length;
+  
+  if (duplicateCount > 0) {
+    console.log(`第1页发现 ${duplicateCount} 张重复图片，已过滤`);
+  }
+  
   pageCount = 1;
   updateProgress(`第${pageCount}页提取完成，当前共${allImages.length}张图片`);
   
@@ -434,7 +453,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     // 等待页面完全加载后继续提取
     setTimeout(() => {
       continueMultiPageExtraction(request.pageCount + 1);
-    }, 3000);
+    }, 1500);
   }
 });
 
@@ -450,7 +469,7 @@ async function waitForPageLoad() {
       if (document.readyState === 'complete') {
         resolve();
       } else {
-        setTimeout(checkLoad, 100);
+        setTimeout(checkLoad, 50);
       }
     };
     checkLoad();
@@ -486,7 +505,7 @@ async function continueMultiPageExtraction(currentPageCount) {
     
     // 等待页面完全加载
     await waitForPageLoad();
-    await sleep(2000); // 额外等待2秒确保图片加载
+    await sleep(1000); // 额外等待1秒确保图片加载
     
     // 检查页面是否有效
     if (!isPageValid()) {
@@ -526,8 +545,18 @@ async function continueMultiPageExtraction(currentPageCount) {
       return src;
     }).filter(src => src && src.trim() !== '');
     
-    // 合并图片
+    // 合并图片并去重
     collectedImagesFromAllPages = collectedImagesFromAllPages.concat(currentPageImages);
+    
+    // 去重处理
+    const beforeDedupCount = collectedImagesFromAllPages.length;
+    collectedImagesFromAllPages = [...new Set(collectedImagesFromAllPages)];
+    const duplicateCount = beforeDedupCount - collectedImagesFromAllPages.length;
+    
+    if (duplicateCount > 0) {
+      console.log(`第${currentPageCount}页发现 ${duplicateCount} 张重复图片，已过滤`);
+    }
+    
     updateProgress(`第${currentPageCount}页提取完成，当前共${collectedImagesFromAllPages.length}张图片`);
     console.log(`第${currentPageCount}页提取完成，当前共${collectedImagesFromAllPages.length}张图片`);
     
@@ -634,7 +663,7 @@ function checkForRecovery() {
         // 等待页面加载后继续
         setTimeout(() => {
           continueMultiPageExtraction(state.pageCount + 1);
-        }, 2000);
+        }, 1000);
         
         return true;
       } else {
