@@ -21,7 +21,8 @@
     "https://www.cool18.com/*",
     "https://reprint-kh.com/*",
     "https://1pondo.com/*",
-    "https://mp.weixin.qq.com/*"
+    "https://mp.weixin.qq.com/*",
+    "https://www.7h9u.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -45,7 +46,8 @@
         "https://www.cool18.com/*",
         "https://reprint-kh.com/*",
         "https://1pondo.com/*",
-        "https://mp.weixin.qq.com/*"
+        "https://mp.weixin.qq.com/*",
+        "https://www.7h9u.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

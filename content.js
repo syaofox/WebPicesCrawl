@@ -64,6 +64,18 @@ function extractImages() {
     if (content) {
       images = Array.from(content.querySelectorAll('img')).map(img => img.dataset.src || img.src);
     }
+  } else if (window.location.hostname.includes('7h9u.com')) {
+    // 7h9u.com网站的图片提取
+    images = Array.from(document.querySelectorAll('#content_news > div > img')).map(img => {
+      let src = img.src || img.dataset.src || img.getAttribute('data-src');
+      // 如果是相对路径，转换为绝对路径
+      if (src && src.startsWith('/')) {
+        src = window.location.origin + src;
+      } else if (src && !src.startsWith('http')) {
+        src = new URL(src, window.location.href).href;
+      }
+      return src;
+    }).filter(src => src && src.trim() !== ''); // 过滤掉空值
   }
 
   return { urls: images, count: images.length, title: pageTitle };
