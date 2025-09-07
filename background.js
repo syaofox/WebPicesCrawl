@@ -43,14 +43,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({success: false, error: chrome.runtime.lastError.message});
       } else {
         console.log('页面跳转成功');
-        // 等待页面加载完成后通知content script
+        
+        // 监听页面加载完成事件
+        const onTabUpdated = (tabId, changeInfo, updatedTab) => {
+          if (tabId === currentTabId && changeInfo.status === 'complete') {
+            console.log('页面加载完成，通知content script');
+            // 移除监听器
+            chrome.tabs.onUpdated.removeListener(onTabUpdated);
+            
+            // 等待额外时间确保页面完全渲染
+            setTimeout(() => {
+              chrome.tabs.sendMessage(currentTabId, {
+                action: "pageNavigated", 
+                pageCount: request.pageCount,
+                collectedImages: request.collectedImages
+              }).catch(error => {
+                console.error('发送消息到content script失败:', error);
+                // 如果发送失败，等待更长时间后重试
+                setTimeout(() => {
+                  chrome.tabs.sendMessage(currentTabId, {
+                    action: "pageNavigated", 
+                    pageCount: request.pageCount,
+                    collectedImages: request.collectedImages
+                  }).catch(retryError => {
+                    console.error('重试发送消息失败:', retryError);
+                  });
+                }, 2000);
+              });
+            }, 2000);
+          }
+        };
+        
+        // 添加页面更新监听器
+        chrome.tabs.onUpdated.addListener(onTabUpdated);
+        
+        // 设置超时保护，如果10秒内页面没有加载完成，强制通知
         setTimeout(() => {
+          chrome.tabs.onUpdated.removeListener(onTabUpdated);
+          console.log('页面加载超时，强制通知content script');
           chrome.tabs.sendMessage(currentTabId, {
             action: "pageNavigated", 
             pageCount: request.pageCount,
             collectedImages: request.collectedImages
+          }).catch(error => {
+            console.error('超时后发送消息失败:', error);
           });
-        }, 3000);
+        }, 10000);
+        
         sendResponse({success: true});
       }
     });

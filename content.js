@@ -112,6 +112,9 @@ async function extractImagesFromAllPages() {
   let allImages = [];
   let pageCount = 0;
   
+  // 记录开始时间
+  extractionStartTime = Date.now();
+  
   updateProgress('开始提取7h9u.com图片...');
   
   // 提取当前页面的图片
@@ -373,9 +376,23 @@ function updateProgress(message) {
 
 // 确保在 DOM 加载完成后创建浮动元素
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', createFloatingElement);
+  document.addEventListener('DOMContentLoaded', () => {
+    createFloatingElement();
+    // 检查是否需要恢复提取任务
+    if (window.location.hostname.includes('7h9u.com')) {
+      setTimeout(() => {
+        checkForRecovery();
+      }, 1000);
+    }
+  });
 } else {
   createFloatingElement();
+  // 检查是否需要恢复提取任务
+  if (window.location.hostname.includes('7h9u.com')) {
+    setTimeout(() => {
+      checkForRecovery();
+    }, 1000);
+  }
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
@@ -417,91 +434,237 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     // 等待页面完全加载后继续提取
     setTimeout(() => {
       continueMultiPageExtraction(request.pageCount + 1);
-    }, 2000);
+    }, 3000);
   }
 });
+
+// 等待页面完全加载
+async function waitForPageLoad() {
+  return new Promise((resolve) => {
+    if (document.readyState === 'complete') {
+      resolve();
+      return;
+    }
+    
+    const checkLoad = () => {
+      if (document.readyState === 'complete') {
+        resolve();
+      } else {
+        setTimeout(checkLoad, 100);
+      }
+    };
+    checkLoad();
+  });
+}
+
+// 检查页面是否有效
+function isPageValid() {
+  // 检查关键元素是否存在
+  const contentNews = document.querySelector('#content_news');
+  if (!contentNews) {
+    console.log('页面无效：找不到#content_news元素');
+    return false;
+  }
+  
+  // 检查是否有图片元素
+  const images = document.querySelectorAll('#content_news > div > img');
+  if (images.length === 0) {
+    console.log('页面无效：找不到图片元素');
+    return false;
+  }
+  
+  return true;
+}
 
 // 继续多页提取
 async function continueMultiPageExtraction(currentPageCount) {
   if (!isMultiPageExtraction) return;
   
-  updateProgress(`正在提取第${currentPageCount}页图片...`);
-  
-  // 提取当前页面的图片
-  const currentPageImages = Array.from(document.querySelectorAll('#content_news > div > img')).map(img => {
-    let src = img.src || img.dataset.src || img.getAttribute('data-src');
-    // 如果是相对路径，转换为绝对路径
-    if (src && src.startsWith('/')) {
-      src = window.location.origin + src;
-    } else if (src && !src.startsWith('http')) {
-      src = new URL(src, window.location.href).href;
+  try {
+    updateProgress(`正在提取第${currentPageCount}页图片...`);
+    console.log(`开始提取第${currentPageCount}页，当前URL: ${window.location.href}`);
+    
+    // 等待页面完全加载
+    await waitForPageLoad();
+    await sleep(2000); // 额外等待2秒确保图片加载
+    
+    // 检查页面是否有效
+    if (!isPageValid()) {
+      console.log(`第${currentPageCount}页无效，跳过`);
+      updateProgress(`第${currentPageCount}页无效，尝试继续...`);
+      
+      // 尝试继续到下一页
+      if (hasNextPage()) {
+        const nextPageUrl = getNextPageUrl();
+        if (nextPageUrl) {
+          updateProgress(`跳过无效页面，准备跳转到第${currentPageCount + 1}页...`);
+          chrome.runtime.sendMessage({
+            action: "navigateToNextPage", 
+            url: nextPageUrl,
+            collectedImages: collectedImagesFromAllPages,
+            pageCount: currentPageCount
+          });
+          return;
+        }
+      }
+      
+      // 如果没有下一页，结束提取
+      updateProgress(`翻页结束，共提取${currentPageCount - 1}页，总计${collectedImagesFromAllPages.length}张图片`);
+      finishMultiPageExtraction(currentPageCount - 1);
+      return;
     }
-    return src;
-  }).filter(src => src && src.trim() !== '');
-  
-  // 合并图片
-  collectedImagesFromAllPages = collectedImagesFromAllPages.concat(currentPageImages);
-  updateProgress(`第${currentPageCount}页提取完成，当前共${collectedImagesFromAllPages.length}张图片`);
-  
-  // 检查是否有下一页
-  if (!hasNextPage()) {
-    updateProgress(`翻页结束，共提取${currentPageCount}页，总计${collectedImagesFromAllPages.length}张图片`);
     
-    // 发送最终结果
-    const finalResult = { 
-      urls: collectedImagesFromAllPages, 
-      count: collectedImagesFromAllPages.length, 
-      title: document.title, 
-      pageCount: currentPageCount 
-    };
+    // 提取当前页面的图片
+    const currentPageImages = Array.from(document.querySelectorAll('#content_news > div > img')).map(img => {
+      let src = img.src || img.dataset.src || img.getAttribute('data-src');
+      // 如果是相对路径，转换为绝对路径
+      if (src && src.startsWith('/')) {
+        src = window.location.origin + src;
+      } else if (src && !src.startsWith('http')) {
+        src = new URL(src, window.location.href).href;
+      }
+      return src;
+    }).filter(src => src && src.trim() !== '');
     
-    chrome.runtime.sendMessage({action: "extract", data: finalResult}, function(response) {
-      console.log('收到背景脚本响应：', response);
-      enableAllButtons();
+    // 合并图片
+    collectedImagesFromAllPages = collectedImagesFromAllPages.concat(currentPageImages);
+    updateProgress(`第${currentPageCount}页提取完成，当前共${collectedImagesFromAllPages.length}张图片`);
+    console.log(`第${currentPageCount}页提取完成，当前共${collectedImagesFromAllPages.length}张图片`);
+    
+    // 保存当前状态
+    saveExtractionState(currentPageCount);
+    lastSuccessfulPage = currentPageCount;
+    
+    // 检查是否有下一页
+    if (!hasNextPage()) {
+      updateProgress(`翻页结束，共提取${currentPageCount}页，总计${collectedImagesFromAllPages.length}张图片`);
+      finishMultiPageExtraction(currentPageCount);
+      return;
+    }
+    
+    // 获取下一页URL
+    const nextPageUrl = getNextPageUrl();
+    if (!nextPageUrl) {
+      updateProgress('无法获取下一页链接，翻页结束');
+      finishMultiPageExtraction(currentPageCount);
+      return;
+    }
+    
+    // 跳转到下一页
+    updateProgress(`准备跳转到第${currentPageCount + 1}页...`);
+    chrome.runtime.sendMessage({
+      action: "navigateToNextPage", 
+      url: nextPageUrl,
+      collectedImages: collectedImagesFromAllPages,
+      pageCount: currentPageCount
     });
     
-    // 重置状态
-    isMultiPageExtraction = false;
-    collectedImagesFromAllPages = [];
-    return;
+  } catch (error) {
+    console.error(`第${currentPageCount}页提取出错:`, error);
+    updateProgress(`第${currentPageCount}页提取出错: ${error.message}`);
+    
+    // 尝试继续到下一页
+    if (hasNextPage()) {
+      const nextPageUrl = getNextPageUrl();
+      if (nextPageUrl) {
+        updateProgress(`出错后尝试跳转到第${currentPageCount + 1}页...`);
+        chrome.runtime.sendMessage({
+          action: "navigateToNextPage", 
+          url: nextPageUrl,
+          collectedImages: collectedImagesFromAllPages,
+          pageCount: currentPageCount
+        });
+        return;
+      }
+    }
+    
+    // 如果没有下一页，结束提取
+    finishMultiPageExtraction(currentPageCount - 1);
   }
+}
+
+// 完成多页提取
+function finishMultiPageExtraction(pageCount) {
+  const finalResult = { 
+    urls: collectedImagesFromAllPages, 
+    count: collectedImagesFromAllPages.length, 
+    title: document.title, 
+    pageCount: pageCount 
+  };
   
-  // 获取下一页URL
-  const nextPageUrl = getNextPageUrl();
-  if (!nextPageUrl) {
-    updateProgress('无法获取下一页链接，翻页结束');
-    
-    // 发送最终结果
-    const finalResult = { 
-      urls: collectedImagesFromAllPages, 
-      count: collectedImagesFromAllPages.length, 
-      title: document.title, 
-      pageCount: currentPageCount 
-    };
-    
-    chrome.runtime.sendMessage({action: "extract", data: finalResult}, function(response) {
-      console.log('收到背景脚本响应：', response);
-      enableAllButtons();
-    });
-    
-    // 重置状态
-    isMultiPageExtraction = false;
-    collectedImagesFromAllPages = [];
-    return;
-  }
-  
-  // 跳转到下一页
-  updateProgress(`准备跳转到第${currentPageCount + 1}页...`);
-  chrome.runtime.sendMessage({
-    action: "navigateToNextPage", 
-    url: nextPageUrl,
-    collectedImages: collectedImagesFromAllPages,
-    pageCount: currentPageCount
+  chrome.runtime.sendMessage({action: "extract", data: finalResult}, function(response) {
+    console.log('收到背景脚本响应：', response);
+    enableAllButtons();
   });
+  
+  // 重置状态
+  isMultiPageExtraction = false;
+  collectedImagesFromAllPages = [];
+  extractionStartTime = null;
+  lastSuccessfulPage = 0;
+  
+  // 清除保存的状态
+  clearExtractionState();
 }
 
 // 全局变量存储7h9u.com多页提取的状态
 let collectedImagesFromAllPages = [];
 let isMultiPageExtraction = false;
+let extractionStartTime = null;
+let lastSuccessfulPage = 0;
+
+// 检查是否需要恢复提取
+function checkForRecovery() {
+  // 检查是否有未完成的提取任务
+  const savedState = localStorage.getItem('7h9u_extraction_state');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      const timeDiff = Date.now() - state.timestamp;
+      
+      // 如果保存的状态在30分钟内，自动恢复
+      if (timeDiff < 30 * 60 * 1000) {
+        console.log(`自动恢复提取任务：${state.pageCount}页，${state.imageCount}张图片`);
+        
+        collectedImagesFromAllPages = state.collectedImages || [];
+        isMultiPageExtraction = true;
+        lastSuccessfulPage = state.pageCount;
+        updateProgress(`自动恢复提取任务，从第${state.pageCount + 1}页继续...`);
+        
+        // 等待页面加载后继续
+        setTimeout(() => {
+          continueMultiPageExtraction(state.pageCount + 1);
+        }, 2000);
+        
+        return true;
+      } else {
+        // 清除过期的状态
+        console.log('清除过期的提取状态');
+        localStorage.removeItem('7h9u_extraction_state');
+      }
+    } catch (error) {
+      console.error('恢复状态失败:', error);
+      localStorage.removeItem('7h9u_extraction_state');
+    }
+  }
+  return false;
+}
+
+// 保存提取状态
+function saveExtractionState(pageCount) {
+  const state = {
+    timestamp: Date.now(),
+    pageCount: pageCount,
+    imageCount: collectedImagesFromAllPages.length,
+    collectedImages: collectedImagesFromAllPages,
+    url: window.location.href
+  };
+  localStorage.setItem('7h9u_extraction_state', JSON.stringify(state));
+}
+
+// 清除提取状态
+function clearExtractionState() {
+  localStorage.removeItem('7h9u_extraction_state');
+}
 
 console.log('content.js 已加载');
