@@ -85,6 +85,77 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// 检查是否有下一页链接
+function hasNextPage() {
+  const nextPageLink = document.querySelector('a.next');
+  return nextPageLink && nextPageLink.textContent.trim() === '下一页';
+}
+
+// 获取下一页链接
+function getNextPageUrl() {
+  const nextPageLink = document.querySelector('a.next');
+  if (nextPageLink && nextPageLink.textContent.trim() === '下一页') {
+    let href = nextPageLink.href;
+    // 如果是相对路径，转换为绝对路径
+    if (href.startsWith('/')) {
+      href = window.location.origin + href;
+    } else if (!href.startsWith('http')) {
+      href = new URL(href, window.location.href).href;
+    }
+    return href;
+  }
+  return null;
+}
+
+// 7h9u.com多页图片提取
+async function extractImagesFromAllPages() {
+  let allImages = [];
+  let pageCount = 0;
+  
+  updateProgress('开始提取7h9u.com图片...');
+  
+  // 提取当前页面的图片
+  const currentPageImages = Array.from(document.querySelectorAll('#content_news > div > img')).map(img => {
+    let src = img.src || img.dataset.src || img.getAttribute('data-src');
+    // 如果是相对路径，转换为绝对路径
+    if (src && src.startsWith('/')) {
+      src = window.location.origin + src;
+    } else if (src && !src.startsWith('http')) {
+      src = new URL(src, window.location.href).href;
+    }
+    return src;
+  }).filter(src => src && src.trim() !== '');
+  
+  allImages = allImages.concat(currentPageImages);
+  pageCount = 1;
+  updateProgress(`第${pageCount}页提取完成，当前共${allImages.length}张图片`);
+  
+  // 检查是否有下一页
+  if (!hasNextPage()) {
+    updateProgress(`翻页结束，共提取${pageCount}页，总计${allImages.length}张图片`);
+    return { urls: allImages, count: allImages.length, title: document.title, pageCount: pageCount };
+  }
+  
+  // 获取下一页URL
+  const nextPageUrl = getNextPageUrl();
+  if (!nextPageUrl) {
+    updateProgress('无法获取下一页链接，翻页结束');
+    return { urls: allImages, count: allImages.length, title: document.title, pageCount: pageCount };
+  }
+  
+  // 通过消息传递机制跳转到下一页，并传递已收集的图片
+  updateProgress(`准备跳转到第${pageCount + 1}页...`);
+  chrome.runtime.sendMessage({
+    action: "navigateToNextPage", 
+    url: nextPageUrl,
+    collectedImages: allImages,
+    pageCount: pageCount
+  });
+  
+  // 返回当前页面的结果，下一页的提取将在新页面中继续
+  return { urls: allImages, count: allImages.length, title: document.title, pageCount: pageCount, hasNext: true };
+}
+
 async function scrollAndLoadImages() {
   const scrollStep = window.innerHeight - 100; // 每次滚动一个屏幕高度减去100像素
   const scrollInterval = 200; // 每200毫秒滚动一次
@@ -230,6 +301,26 @@ function createFloatingElement() {
           enableAllButtons();
         });
       });
+    } else if (window.location.hostname.includes('7h9u.com')) {
+      // 7h9u.com使用多页提取功能
+      extractImagesFromAllPages().then((result) => {
+        console.log('提取的图片：', result);
+        if (result.hasNext) {
+          // 如果有下一页，不立即发送结果，等待多页提取完成
+          updateProgress(`第${result.pageCount}页提取完成，准备跳转到下一页...`);
+        } else {
+          // 如果没有下一页，直接发送结果
+          updateProgress(`提取完成，共提取 ${result.count} 张图片，共${result.pageCount}页`);
+          chrome.runtime.sendMessage({action: "extract", data: result}, function(response) {
+            console.log('收到背景脚本响应：', response);
+            enableAllButtons();
+          });
+        }
+      }).catch((error) => {
+        console.error('提取图片时出错：', error);
+        updateProgress('提取图片时出错：' + error.message);
+        enableAllButtons();
+      });
     } else {
       const result = extractImages();
       console.log('提取的图片：', result);
@@ -296,6 +387,17 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         enableAllButtons();
       });
       return true; // 保持消息通道开放
+    } else if (window.location.hostname.includes('7h9u.com')) {
+      // 7h9u.com使用多页提取功能
+      extractImagesFromAllPages().then((result) => {
+        sendResponse(result);
+        enableAllButtons();
+      }).catch((error) => {
+        console.error('提取图片时出错：', error);
+        sendResponse({error: error.message});
+        enableAllButtons();
+      });
+      return true; // 保持消息通道开放
     } else {
       const result = extractImages();
       sendResponse(result);
@@ -304,7 +406,102 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   } else if (request.action === "downloadComplete") {
     updateProgress(`下载完成，共下载 ${request.count} 张图片`);
     enableAllButtons();
+  } else if (request.action === "pageNavigated") {
+    // 处理页面跳转完成的消息
+    updateProgress(`已跳转到第${request.pageCount + 1}页，继续提取图片...`);
+    
+    // 设置多页提取状态
+    isMultiPageExtraction = true;
+    collectedImagesFromAllPages = request.collectedImages || [];
+    
+    // 等待页面完全加载后继续提取
+    setTimeout(() => {
+      continueMultiPageExtraction(request.pageCount + 1);
+    }, 2000);
   }
 });
+
+// 继续多页提取
+async function continueMultiPageExtraction(currentPageCount) {
+  if (!isMultiPageExtraction) return;
+  
+  updateProgress(`正在提取第${currentPageCount}页图片...`);
+  
+  // 提取当前页面的图片
+  const currentPageImages = Array.from(document.querySelectorAll('#content_news > div > img')).map(img => {
+    let src = img.src || img.dataset.src || img.getAttribute('data-src');
+    // 如果是相对路径，转换为绝对路径
+    if (src && src.startsWith('/')) {
+      src = window.location.origin + src;
+    } else if (src && !src.startsWith('http')) {
+      src = new URL(src, window.location.href).href;
+    }
+    return src;
+  }).filter(src => src && src.trim() !== '');
+  
+  // 合并图片
+  collectedImagesFromAllPages = collectedImagesFromAllPages.concat(currentPageImages);
+  updateProgress(`第${currentPageCount}页提取完成，当前共${collectedImagesFromAllPages.length}张图片`);
+  
+  // 检查是否有下一页
+  if (!hasNextPage()) {
+    updateProgress(`翻页结束，共提取${currentPageCount}页，总计${collectedImagesFromAllPages.length}张图片`);
+    
+    // 发送最终结果
+    const finalResult = { 
+      urls: collectedImagesFromAllPages, 
+      count: collectedImagesFromAllPages.length, 
+      title: document.title, 
+      pageCount: currentPageCount 
+    };
+    
+    chrome.runtime.sendMessage({action: "extract", data: finalResult}, function(response) {
+      console.log('收到背景脚本响应：', response);
+      enableAllButtons();
+    });
+    
+    // 重置状态
+    isMultiPageExtraction = false;
+    collectedImagesFromAllPages = [];
+    return;
+  }
+  
+  // 获取下一页URL
+  const nextPageUrl = getNextPageUrl();
+  if (!nextPageUrl) {
+    updateProgress('无法获取下一页链接，翻页结束');
+    
+    // 发送最终结果
+    const finalResult = { 
+      urls: collectedImagesFromAllPages, 
+      count: collectedImagesFromAllPages.length, 
+      title: document.title, 
+      pageCount: currentPageCount 
+    };
+    
+    chrome.runtime.sendMessage({action: "extract", data: finalResult}, function(response) {
+      console.log('收到背景脚本响应：', response);
+      enableAllButtons();
+    });
+    
+    // 重置状态
+    isMultiPageExtraction = false;
+    collectedImagesFromAllPages = [];
+    return;
+  }
+  
+  // 跳转到下一页
+  updateProgress(`准备跳转到第${currentPageCount + 1}页...`);
+  chrome.runtime.sendMessage({
+    action: "navigateToNextPage", 
+    url: nextPageUrl,
+    collectedImages: collectedImagesFromAllPages,
+    pageCount: currentPageCount
+  });
+}
+
+// 全局变量存储7h9u.com多页提取的状态
+let collectedImagesFromAllPages = [];
+let isMultiPageExtraction = false;
 
 console.log('content.js 已加载');

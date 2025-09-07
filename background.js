@@ -31,6 +31,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({success: false, error: "没有可下载的图片"});
     }
     return true; // 保持消息通道开放
+  } else if (request.action === "navigateToNextPage") {
+    // 处理7h9u.com的页面跳转
+    console.log('准备跳转到下一页:', request.url);
+    currentTabId = sender.tab.id;
+    
+    // 跳转到下一页
+    chrome.tabs.update(currentTabId, {url: request.url}, (tab) => {
+      if (chrome.runtime.lastError) {
+        console.error('页面跳转失败:', chrome.runtime.lastError);
+        sendResponse({success: false, error: chrome.runtime.lastError.message});
+      } else {
+        console.log('页面跳转成功');
+        // 等待页面加载完成后通知content script
+        setTimeout(() => {
+          chrome.tabs.sendMessage(currentTabId, {
+            action: "pageNavigated", 
+            pageCount: request.pageCount,
+            collectedImages: request.collectedImages
+          });
+        }, 3000);
+        sendResponse({success: true});
+      }
+    });
+    return true; // 保持消息通道开放
   }
 });
 
