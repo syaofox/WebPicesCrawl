@@ -20,7 +20,8 @@
     "https://www.jkforum.net/*",
     "https://www.cool18.com/*",
     "https://reprint-kh.com/*",
-    "https://1pondo.com/*"
+    "https://1pondo.com/*",
+    "https://mp.weixin.qq.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
@@ -43,7 +44,8 @@
         "https://www.jkforum.net/*",
         "https://www.cool18.com/*",
         "https://reprint-kh.com/*",
-        "https://1pondo.com/*"
+        "https://1pondo.com/*",
+        "https://mp.weixin.qq.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

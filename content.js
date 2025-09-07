@@ -58,6 +58,12 @@ function extractImages() {
     if (macyContainer) {
       images = Array.from(macyContainer.querySelectorAll('a')).map(a => a.href);
     }
+  } else if (window.location.hostname.includes('mp.weixin.qq.com')) {
+
+    const content = document.getElementById('js_content');
+    if (content) {
+      images = Array.from(content.querySelectorAll('img')).map(img => img.dataset.src || img.src);
+    }
   }
 
   return { urls: images, count: images.length, title: pageTitle };
