@@ -40,7 +40,7 @@ function extractImages() {
     const images2 = Array.from(document.querySelectorAll(selector2));
     images = [...images1, ...images2].map(img => img.src);
   } else if (window.location.hostname.includes('cool18.com')) {
-    images = Array.from(document.querySelectorAll('td > pre > center > img')).map(img => img.getAttribute('mydatasrc') || img.src);
+    images = Array.from(document.querySelectorAll('pre > center > img')).map(img => img.getAttribute('mydatasrc') || img.src);
   } else if (window.location.hostname.includes('reprint-kh.com')) {
     images = Array.from(document.querySelectorAll('div.tiled-gallery-item a[data-image-id]')).map(a => {
       let src = a.href;
