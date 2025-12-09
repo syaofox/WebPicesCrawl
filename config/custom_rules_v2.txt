@@ -37,6 +37,7 @@ custom_proxy_group=♻️ 自动选择`url-test`.*`http://www.gstatic.com/genera
 
 ; 各国家/地区代理群组
 ; 匹配 bunny.yml 中的实际节点名称：台湾A01, 新加坡A01, 香港A01, 日本A01, 美国A01 等
+; 使用简单的正则表达式，确保能匹配到所有节点
 
 custom_proxy_group=🇭🇰 香港节点`select`.*香港.*
 
@@ -48,6 +49,7 @@ custom_proxy_group=🇯🇵 日本节点`select`.*日本.*
 
 custom_proxy_group=🇺🇸 美国节点`select`.*美国.*
 
+; 其他节点：匹配所有节点（包含所有未被前面组匹配的节点）
 custom_proxy_group=🌍 其他节点`select`.*
 
 enable_rule_generator=true
